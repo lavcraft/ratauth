@@ -1,6 +1,7 @@
 package ru.ratauth.server.services;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import java.util.Map;
  * @author mgorelikov
  * @since 29/01/16
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class OpenIdRegistrationService implements RegistrationService {
@@ -30,8 +32,8 @@ public class OpenIdRegistrationService implements RegistrationService {
   public Observable<RegResult> register(RegistrationRequest request) {
     return authClientService.loadRelyingParty(request.getClientId())
         .flatMap(rp -> registerProviders.get(rp.getName())
-                .register(RegInput.builder().relyingParty(rp.getName()).data(request.getData()).build())
-        );
+                .register(RegInput.builder().relyingParty(rp.getName()).data(request.getData()).build()))
+        .doOnNext(regResult -> logRegistrationResponse(regResult));
   }
 
   @Override
@@ -44,6 +46,15 @@ public class OpenIdRegistrationService implements RegistrationService {
         .flatMap(rpRegResult -> authSessionService.createSession(rpRegResult.getLeft(), rpRegResult.getRight().getData(), request.getScopes(), null)
                 .map(session -> new ImmutablePair<>(rpRegResult.getLeft(), session))
         )
-        .flatMap(rpSession -> tokenService.createIdTokenAndResponse(rpSession.getRight(), rpSession.getLeft()));
+        .flatMap(rpSession -> tokenService.createIdTokenAndResponse(rpSession.getRight(), rpSession.getLeft()))
+        .doOnNext(response -> logRegistrationResponse(response));
+  }
+
+  private static void logRegistrationResponse(RegResult regResult) {
+    log.debug("Finished first step of registration flow with response:\n" + regResult.toString());
+  }
+
+  private static void logRegistrationResponse(TokenResponse response) {
+    log.debug("Finished second step of registration flow with response:\n" + response.toString());
   }
 }

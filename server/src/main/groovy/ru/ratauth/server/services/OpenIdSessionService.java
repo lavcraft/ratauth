@@ -2,6 +2,7 @@ package ru.ratauth.server.services;
 
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.*;
  * @author djassan
  * @since 17/02/16
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class OpenIdSessionService implements AuthSessionService {
@@ -58,10 +60,10 @@ public class OpenIdSessionService implements AuthSessionService {
     final LocalDateTime refreshExpires = now.plus(relyingParty.getRefreshTokenTTL(), ChronoUnit.SECONDS);
     final LocalDateTime authCodeExpires = now.plus(relyingParty.getCodeTTL(), ChronoUnit.SECONDS);
 
-
+    final String subject = tokenCacheService.extractSubject(userInfo);
     final String jwtInfo = tokenProcessor.createToken(masterSecret, null,
         DateUtils.fromLocal(now), DateUtils.fromLocal(sessionExpires),
-        tokenCacheService.extractAudience(scopes), scopes, tokenCacheService.extractSubject(userInfo), userInfo);
+        tokenCacheService.extractAudience(scopes), scopes, subject, userInfo);
 
     final AuthEntry authEntry = AuthEntry.builder()
         .created(DateUtils.fromLocal(now))
@@ -83,7 +85,8 @@ public class OpenIdSessionService implements AuthSessionService {
         .userInfo(jwtInfo)
         .entries(new HashSet<>(Arrays.asList(authEntry)))
         .build();
-    return sessionService.create(session);
+    return sessionService.create(session)
+        .doOnNext(sess -> logSession(subject, relyingParty.getName()));
   }
 
   @Override
@@ -133,5 +136,9 @@ public class OpenIdSessionService implements AuthSessionService {
   @Override
   public Observable<Session> getByValidToken(String token, Date now) {
     return sessionService.getByValidToken(token, now);
+  }
+
+  private static void logSession(String subject, String relyingParty) {
+    log.info("Created session by relyingParty: " + relyingParty + " for subject: " + subject);
   }
 }

@@ -2,6 +2,7 @@ package ru.ratauth.server.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ import ru.ratauth.interaction.TokenType;
 import ru.ratauth.providers.auth.AuthProvider;
 import ru.ratauth.providers.auth.dto.AuthInput;
 import ru.ratauth.providers.auth.dto.AuthResult;
+import ru.ratauth.utils.StringUtils;
 import rx.Observable;
 
 import java.util.Date;
@@ -24,6 +26,7 @@ import java.util.Optional;
  * @author mgorelikov
  * @since 02/11/15
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class OpenIdAuthorizeService implements AuthorizeService {
@@ -47,7 +50,8 @@ public class OpenIdAuthorizeService implements AuthorizeService {
                 createIdToken(rpSession.getLeft(), rpSession.getRight())
                     .map(idToken -> new ImmutablePair<>(rpSession.getRight(), idToken))
         )
-        .map(sessionToken -> buildResponse(request.getRedirectURI(), request.getClientId(), sessionToken.getLeft(), sessionToken.right));
+        .map(sessionToken -> buildResponse(request.getRedirectURI(), request.getClientId(), sessionToken.getLeft(), sessionToken.right))
+        .doOnNext(resp -> logResponse(resp));
   }
 
   @Override
@@ -114,5 +118,16 @@ public class OpenIdAuthorizeService implements AuthorizeService {
       resp.setExpiresIn(entry.getCodeExpiresIn().getTime());
     }
     return resp;
+  }
+
+  private static void logResponse(AuthzResponse response) {
+    String logText;
+    if(!StringUtils.isBlank(response.getCode()))
+      logText = "First step of authCode authorization flow is completed with response:\n";
+    else if(!StringUtils.isBlank(response.getToken()))
+      logText = "Implicit authorization flow is completed with response:\n";
+    else
+      logText = "First step of authCode authorization flow is completed with response:\n";
+    log.debug(logText + response.toString());
   }
 }

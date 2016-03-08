@@ -1,5 +1,6 @@
 package ru.ratauth.server.handlers.readers
 
+import groovy.util.logging.Slf4j
 import ratpack.form.Form
 import ratpack.http.Headers
 import ru.ratauth.interaction.GrantType
@@ -11,6 +12,7 @@ import static ru.ratauth.server.handlers.readers.RequestUtil.*
  * @author mgorelikov
  * @since 29/01/16
  */
+@Slf4j
 class RegistrationRequestReader {
   private static final String CLIENT_ID = "client_id"
   private static final String CODE = "code"
@@ -19,6 +21,7 @@ class RegistrationRequestReader {
   private static final Set BASE_FIELDS = [CLIENT_ID,GRANT_TYPE,RESPONSE_TYPE] as Set
 
   static RegistrationRequest readRegistrationRequest(Form form, Headers headers) {
+    log.debug('Reading registration request\nparams:' + form.toMapString() + '\nheaders:'+headers.asMultiValueMap().toMapString())
     GrantType grantType = GrantType.valueOf(extractField(form, GRANT_TYPE, true).toUpperCase())
     def builder = RegistrationRequest.builder()
         .grantType(grantType)

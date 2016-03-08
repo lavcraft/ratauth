@@ -1,6 +1,7 @@
 package ru.ratauth.server.handlers.readers
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import ratpack.http.Headers
 import ratpack.util.MultiValueMap
 import ru.ratauth.interaction.AuthzRequest
@@ -14,6 +15,7 @@ import static ru.ratauth.server.handlers.readers.RequestUtil.*
  * @since 06/11/15
  */
 @CompileStatic
+@Slf4j
 class AuthzRequestReader {
   private static final String RESPONSE_TYPE = "response_type"
   private static final String GRANT_TYPE = "grant_type"
@@ -25,6 +27,7 @@ class AuthzRequestReader {
   final Set<String> BASE_FIELDS = new HashSet<String>(Arrays.asList(RESPONSE_TYPE, CLIENT_ID, SCOPE, REDIRECT_URI, REFRESH_TOKEN, GRANT_TYPE));
 
   static AuthzRequest readAuthzRequest(MultiValueMap<String, String> params, Headers headers) {
+    log.debug('Reading auth request\nparams:' + params.toMapString() + '\nheaders:'+headers.asMultiValueMap().toMapString())
     AuthzResponseType responseType = AuthzResponseType.valueOf(extractField(params, RESPONSE_TYPE, true).toUpperCase())
     GrantType grantType = extractGrantType(params)
 

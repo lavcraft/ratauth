@@ -3,6 +3,7 @@ package ru.ratauth.server.services;
 import com.nimbusds.jose.JOSEException;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ import java.util.Map;
  * @author mgorelikov
  * @since 03/11/15
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class OpenIdAuthTokenService implements AuthTokenService {
@@ -40,7 +42,8 @@ public class OpenIdAuthTokenService implements AuthTokenService {
     return relyingPartyObservable
         .flatMap(rp -> loadSession(oauthRequest, rp).map(ses -> new ImmutablePair<>(rp, ses)))
         .flatMap(rpSess -> authSessionService.addToken(rpSess.getRight(), rpSess.getLeft()).map(res -> rpSess))
-        .flatMap(rpSess -> createIdTokenAndResponse(rpSess.getRight(), rpSess.getLeft()));
+        .flatMap(rpSess -> createIdTokenAndResponse(rpSess.getRight(), rpSess.getLeft()))
+        .doOnNext(resp -> logTokenResponse(resp, oauthRequest));
   }
 
   @Override
@@ -74,7 +77,8 @@ public class OpenIdAuthTokenService implements AuthTokenService {
                   .build();
             }
         )
-        .switchIfEmpty(Observable.error(new AuthorizationException("Token not found")));
+        .switchIfEmpty(Observable.error(new AuthorizationException("Token not found")))
+        .doOnNext(response -> logCheckTokenResponse(response));
   }
 
 
@@ -119,5 +123,17 @@ public class OpenIdAuthTokenService implements AuthTokenService {
           (client, externalClient) -> externalClient);
     else
       return res;
+  }
+
+  private static void logTokenResponse(TokenResponse response, TokenRequest request) {
+    switch (request.getGrantType()) {
+      case REFRESH_TOKEN: log.debug("Finished refresh token flow with response:\n" + response.toString()); break;
+      case AUTHORIZATION_CODE: log.debug("Finished second step of authCode flow with response:\n" + response.toString());break;
+      default: log.debug("Finished second step of authCode(by provider) flow with response:\n" + response.toString());break;
+    }
+  }
+
+  private static void logCheckTokenResponse(CheckTokenResponse response) {
+    log.debug("Finished check token flow with response:\n"+ response.toString());
   }
 }
