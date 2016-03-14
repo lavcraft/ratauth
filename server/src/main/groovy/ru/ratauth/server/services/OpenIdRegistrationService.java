@@ -31,9 +31,9 @@ public class OpenIdRegistrationService implements RegistrationService {
   @Override
   public Observable<RegResult> register(RegistrationRequest request) {
     return authClientService.loadRelyingParty(request.getClientId())
-        .flatMap(rp -> registerProviders.get(rp.getName())
+        .flatMap(rp -> registerProviders.get(rp.getIdentityProvider())
                 .register(RegInput.builder().relyingParty(rp.getName()).data(request.getData()).build()))
-        .doOnNext(regResult -> logRegistrationResponse(regResult));
+      .doOnNext(regResult -> logRegistrationResponse(regResult));
   }
 
   @Override
