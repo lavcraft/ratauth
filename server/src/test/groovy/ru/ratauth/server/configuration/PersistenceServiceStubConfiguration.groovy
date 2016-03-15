@@ -125,7 +125,7 @@ class PersistenceServiceStubConfiguration {
                       )] as Set)
           )
         else
-          return Observable.error(new ExpiredException('Auth code expired'))
+          return Observable.error(new ExpiredException(ExpiredException.ID.AUTH_CODE_EXPIRED))
       }
 
 

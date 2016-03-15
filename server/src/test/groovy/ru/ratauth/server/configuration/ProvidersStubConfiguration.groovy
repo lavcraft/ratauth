@@ -58,7 +58,7 @@ class ProvidersStubConfiguration {
         if (input.data.get(BaseAuthFields.USERNAME.val()) == 'login' && input.data.get(BaseAuthFields.PASSWORD.val()) == 'password')
           return Observable.just(RegResult.builder().data([(BaseAuthFields.USER_ID.val()): 'user_id'] as Map).status(RegResult.Status.SUCCESS).build())
         else
-          return Observable.error(new RegistrationException("Registration failed"));
+          return Observable.error(new RegistrationException(RegistrationException.ID.CLIENT_NOT_FOUND));
       }
 
       @Override

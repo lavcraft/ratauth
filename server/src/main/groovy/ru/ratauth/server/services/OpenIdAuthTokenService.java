@@ -52,32 +52,32 @@ public class OpenIdAuthTokenService implements AuthTokenService {
     return tokenCacheService.getToken(session, relyingParty, entry)
         .map(idToken -> new ImmutablePair<>(entry, idToken))
         .map(entryToken -> convertToResponse(entryToken.getLeft(), entryToken.getRight().getIdToken()))
-        .switchIfEmpty(Observable.error(new AuthorizationException()));
+        .switchIfEmpty(Observable.error(new AuthorizationException(AuthorizationException.ID.TOKEN_NOT_FOUND )));
   }
 
   @Override
   public Observable<CheckTokenResponse> checkToken(CheckTokenRequest oauthRequest) {
     return authSessionService.getByValidToken(oauthRequest.getToken(), new Date())
         .zipWith(loadRelyingParty(oauthRequest),
-            (session, client) -> new ImmutablePair<>(session, client))
+          (session, client) -> new ImmutablePair<>(session, client))
         .flatMap(sessionClient -> {
           //load idToken(jwt) from cache or create new
           AuthEntry entry = sessionClient.getLeft().getEntries().iterator().next();
           return tokenCacheService.getToken(sessionClient.getLeft(), sessionClient.getRight(), entry)
-              .map(token -> new ImmutablePair<>(entry, token));
+            .map(token -> new ImmutablePair<>(entry, token));
         })
         .map(entryToken -> {
-              AuthEntry entry = entryToken.getLeft();
-              Token token = entry.getTokens().iterator().next();
-              return CheckTokenResponse.builder()
-                  .idToken(entryToken.getRight().getIdToken())
-                  .clientId(entryToken.getRight().getClient())
-                  .expiresIn(token.getExpiresIn().getTime())
-                  .scopes(entry.getScopes())
-                  .build();
-            }
+            AuthEntry entry = entryToken.getLeft();
+            Token token = entry.getTokens().iterator().next();
+            return CheckTokenResponse.builder()
+              .idToken(entryToken.getRight().getIdToken())
+              .clientId(entryToken.getRight().getClient())
+              .expiresIn(token.getExpiresIn().getTime())
+              .scopes(entry.getScopes())
+              .build();
+          }
         )
-        .switchIfEmpty(Observable.error(new AuthorizationException("Token not found")))
+        .switchIfEmpty(Observable.error(new AuthorizationException(AuthorizationException.ID.TOKEN_NOT_FOUND)))
         .doOnNext(response -> logCheckTokenResponse(response));
   }
 
@@ -105,8 +105,8 @@ public class OpenIdAuthTokenService implements AuthTokenService {
           .filter(sess -> sess.getEntry(relyingParty.getName()).map(entry -> CollectionUtils.isEmpty(entry.getTokens())).orElse(false));
     else if (oauthRequest.getGrantType() == GrantType.REFRESH_TOKEN || oauthRequest.getGrantType() == GrantType.AUTHENTICATION_TOKEN)
       authObs = authSessionService.getByValidRefreshToken(oauthRequest.getRefreshToken(), new Date());
-    else return Observable.error(new AuthorizationException("Invalid grant type"));
-    return authObs.switchIfEmpty(Observable.error(new AuthorizationException("Session not found")));
+    else return Observable.error(new AuthorizationException(AuthorizationException.ID.INVALID_GRANT_TYPE));
+    return authObs.switchIfEmpty(Observable.error(new AuthorizationException(AuthorizationException.ID.SESSION_NOT_FOUND)));
   }
 
   /**
