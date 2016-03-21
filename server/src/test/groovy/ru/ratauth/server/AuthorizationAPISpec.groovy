@@ -10,6 +10,7 @@ import org.springframework.http.*
 import org.springframework.test.context.TestPropertySource
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
+import ru.ratauth.exception.AuthorizationException
 import ru.ratauth.server.configuration.PersistenceServiceStubConfiguration
 import ru.ratauth.server.handlers.dto.CheckTokenDTO
 import ru.ratauth.server.handlers.dto.TokenDTO
@@ -83,7 +84,7 @@ class AuthorizationAPISpec extends Specification {
     then:
     def e = thrown(HttpClientErrorException)
     e.getMessage().contains('403')
-    e.getResponseBodyAsString().contains('Authorization failed')
+    e.getResponseBodyAsString().contains(AuthorizationException.ID.CREDENTIALS_WRONG.baseText)
   }
 
   def 'request token'() {
